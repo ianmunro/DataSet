@@ -1,0 +1,458 @@
+---
+title: "Anime: What Makes a Series Good?"
+author: "Ian Mogensen"
+date: "May 8, 2021"
+output:
+    prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+
+```{r libraries, include = FALSE}
+#library(tidyverse)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+options(warn=-1)
+```
+
+
+```{r raw_data, cache=FALSE, include=FALSE}
+library(readr)
+anime_data <- read_csv("C:/Users/mogen/Dropbox/3080/alt/AnimeStats/fin/animes.csv", 
+    trim_ws = FALSE)
+```
+
+# Introduction
+
+Anime is a form of hand-drawn and computer animation originating from Japan, with ever-increasing popularity both in Japan and overseas. MyAnimeList, the primary website for holding data on anime, includes a massive user-base where users can track anything they plan to watch or have watched, as well as write reviews or score anime on a scale from 1-10.
+
+With well over ten-thousand unique anime hosted on MyAnimeList alone, what trends, if any, do the most critically acclaimed anime follow (i.e. anime with the highest average 1-10 scores from users). Do particular genres of anime (comedy, action, romance, etc.) tend to score higher than others? Does popularity/viewership of an anime go hand-in-hand with how highly scored they are?
+
+The following table shows the 10 highest rated anime, along with other information like their ranking when it comes to number of viewers, denoted from this point forward as popularity. It's also worth noting that MyAnimeList uses a weighted score; anime with only a single review of 10 stars will not show up as having a score of 10, for example.
+
+```{r, echo = FALSE, results='asis'}
+library("xtable")
+general_info <- data.frame(Rank = anime_data$ranked, Score = anime_data$score, Title = anime_data$title, Episodes = anime_data$episodes, Popularity = anime_data$popularity)
+general_info <- subset(general_info, Score > 9.0)
+general_info <- general_info[!duplicated(general_info),]
+general_info <- general_info[order(-general_info$Score), ]
+
+print(xtable(general_info,caption = "Data For Top 10 Highest Rated Anime",digits=c(0,0,2,2,0,0)), type="html", caption.placement="top",include.rownames = FALSE)
+```
+
+Immediately, we notice quite a bit of variation between critical ranking based on score and popularity ranking based on viewer count. For example, Ginga Eiyuu Densetsu is the 8th highest rated anime, but 620th when it comes to viewership. Let's further examine the relationship between scores and popularity.
+
+```{r processed_data, include=FALSE, cache = FALSE, dependson = "raw_data"}
+rank_to_pop <- data.frame(Title = anime_data$title, Rank = anime_data$ranked, Popularity = anime_data$popularity)
+rank_to_pop <- rank_to_pop[!duplicated(rank_to_pop),]
+rank_to_pop <- rank_to_pop[order(rank_to_pop$Rank), ]
+
+```
+
+# Popularity vs. Critical Acclaim
+
+```{r plot_data, echo=FALSE, dependson = "processed_data"}
+ggp <- ggplot(rank_to_pop, aes(x=Rank, y=Popularity)) +
+  geom_point(col = "cornflowerblue") +
+  geom_smooth(method = "lm", se = FALSE, size = 1.3, col = "burlywood", formula='y~x')
+
+print(ggp)
+```
+
+There is certainly a linear relationship between ranking based on score and ranking based on popularity, which is what we would expect - the better an anime is received, the more viewers it is likely to reel in. Conversely, anime of lesser quality won't gain as much traction. 
+
+With this plot, however, we see a suspiciously abrupt vertical divide around the 12,000 mark on the x-axis. This corresponds to anime listed on the MyAnimeList database that has too little traction to have reliable and comparable information. Let's have a look at the same plot after filtering these miscellaneous anime, which should provide more accurate conclusions.
+
+```{r, echo=FALSE, dependson = "processed_data"}
+filter1 <- subset(rank_to_pop, Rank < 11500)
+filter2 <- subset(filter1, Popularity < 11500)
+rank_to_Pop <- filter2
+
+ggp <- ggplot(filter2, aes(x=Rank, y=Popularity)) +
+  geom_point(col = "cornflowerblue") +
+  geom_smooth(method = "lm", se = FALSE, size = 1.3, col = "burlywood", formula='y~x')
+
+print(ggp)
+```
+
+If score and popularity were perfectly correspondent, we would expect a strict diagonal line of points. Instead we have a notable amount of variation, or spread of points, though the general linear relationship is still apparent. Let's take a look at some other factors that may relate to ranking.
+
+```{r, echo=FALSE, dependson = "processed_data"}
+genre_data <- data.frame(Title = anime_data$title, Score = anime_data$score, Genre = anime_data$genre, Rank = anime_data$ranked)
+genre_data <- genre_data[!duplicated(genre_data),]
+genre_data <- genre_data[order(genre_data$Rank), ]
+
+i <- 0
+j <- 0
+Thriller <- vector(mode = "list", length = 109)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 109 && grepl("Thriller", type, fixed = TRUE)) {
+    i <- i + 1
+    Thriller[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Comedy <- vector(mode = "list", length = 4587)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 4587 && grepl("Comedy", type, fixed = TRUE)) {
+    i <- i + 1
+    Comedy[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Sports <- vector(mode = "list", length = 544)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 544 && grepl("Sports", type, fixed = TRUE)) {
+    i <- i + 1
+    Sports[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Drama <- vector(mode = "list", length = 1967)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 1967 && grepl("Drama", type, fixed = TRUE)) {
+    i <- i + 1
+    Drama[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Romance <- vector(mode = "list", length = 1586)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 1586 && grepl("Romance", type, fixed = TRUE)) {
+    i <- i + 1
+    Romance[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+School <- vector(mode = "list", length = 1330)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 1330 && grepl("School", type, fixed = TRUE)) {
+    i <- i + 1
+    School[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Shounen <- vector(mode = "list", length = 1839)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 1839 && grepl("Shounen", type, fixed = TRUE)) {
+    i <- i + 1
+    Shounen[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Action <- vector(mode = "list", length = 3171)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 3171 && grepl("Action", type, fixed = TRUE)) {
+    i <- i + 1
+    Action[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Supernatural <- vector(mode = "list", length = 1166)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 1166 && grepl("Supernatural", type, fixed = TRUE)) {
+    i <- i + 1
+    Supernatural[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Adventure <- vector(mode = "list", length = 2288)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 2288 && grepl("Adventure", type, fixed = TRUE)) {
+    i <- i + 1
+    Adventure[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Music <- vector(mode = "list", length = 1328)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 1328 && grepl("Music", type, fixed = TRUE)) {
+    i <- i + 1
+    Music[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Slice_of_Life <- vector(mode = "list", length = 1382)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 1382 && grepl("Slice of Life", type, fixed = TRUE)) {
+    i <- i + 1
+    Slice_of_Life[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Shoujo <- vector(mode = "list", length = 687)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 687 && grepl("Shoujo", type, fixed = TRUE)) {
+    i <- i + 1
+    Shoujo[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Psychological <- vector(mode = "list", length = 292)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 292 && grepl("Psychological", type, fixed = TRUE)) {
+    i <- i + 1
+    Psychological[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Sci_fi <- vector(mode = "list", length = 2153)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 2153 && grepl("Sci-Fi", type, fixed = TRUE)) {
+    i <- i + 1
+    Sci_fi[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+
+i <- 0
+j <- 0
+Historical <- vector(mode = "list", length = 558)
+for (type in genre_data$Genre) {
+  type <- toString(type)
+  j <- j + 1
+  if (i < 558 && grepl("Historical", type, fixed = TRUE)) {
+    i <- i + 1
+    Historical[[i]] <- genre_data %>% filter(Rank == j) %>% pull(Score)
+  }
+}
+```
+
+# Genres vs. Critical Acclaim
+
+```{r, echo=FALSE}
+Thriller <- unlist(Thriller, recursive=TRUE, use.names=TRUE)
+Sports <- unlist(Sports, recursive=TRUE, use.names=TRUE)
+School <- unlist(School, recursive=TRUE, use.names=TRUE)
+Sci_fi <- unlist(Sci_fi, recursive=TRUE, use.names=TRUE)
+Psychological <- unlist(Psychological, recursive=TRUE, use.names=TRUE)
+Shoujo <- unlist(Shoujo, recursive=TRUE, use.names=TRUE)
+Slice_of_Life <- unlist(Slice_of_Life, recursive=TRUE, use.names=TRUE)
+Music <- unlist(Music, recursive=TRUE, use.names=TRUE)
+Adventure <- unlist(Adventure, recursive=TRUE, use.names=TRUE)
+Supernatural <- unlist(Supernatural, recursive=TRUE, use.names=TRUE)
+Action <- unlist(Action, recursive=TRUE, use.names=TRUE)
+Shounen <- unlist(Shounen, recursive=TRUE, use.names=TRUE)
+Romance <- unlist(Romance, recursive=TRUE, use.names=TRUE)
+Drama <- unlist(Drama, recursive=TRUE, use.names=TRUE)
+Comedy <- unlist(Comedy, recursive=TRUE, use.names=TRUE)
+Historical <- unlist(Historical, recursive=TRUE, use.names=TRUE)
+
+a <- data.frame(group = "Thriller", Score = Thriller)
+b <- data.frame(group = "Sports", Score = Sports)
+c <- data.frame(group = "School", Score = School)
+d <- data.frame(group = "Sci_fi", Score = Sci_fi)
+e <- data.frame(group = "Psychological", Score = Psychological)
+f <- data.frame(group = "Shoujo", Score = Shoujo)
+g <- data.frame(group = "Slice_of_Life", Score = Slice_of_Life)
+h <- data.frame(group = "Music", Score = Music)
+i <- data.frame(group = "Adventure", Score = Adventure)
+j <- data.frame(group = "Supernatural", Score = Supernatural)
+k <- data.frame(group = "Action", Score = Action)
+l <- data.frame(group = "Shounen", Score = Shounen)
+m <- data.frame(group = "Drama", Score = Drama)
+n <- data.frame(group = "Comedy", Score = Comedy)
+o <- data.frame(group = "Romance", Score = Romance)
+p <- data.frame(group = "Historical", Score = Historical)
+
+all_genres <- rbind(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p)
+ggp2 <- ggplot(all_genres, aes(x=group, y=Score, fill=group)) + 
+  geom_boxplot() + 
+  coord_flip() +
+  labs(x="Genre", y="1-10 Ratings")
+
+print(ggp2)
+```
+
+Anime is a massive industry with genres for a broad range of audiences, so it would make sense to check for differences among these various target audiences. The boxplots show all genres as quite similar in score, with the exception of the Music genre noticeably underperforming.
+
+But we have to consider that scores and ranks on MyAnimeList are competitive - a score of 6.95 will rank an anime as 3982th, while a score of 6.80, just 0.15 points lower, will rank an anime as 4664th, nearly 700 spots lower. Let's observe the mean score of each genre while zooming in on the score axis to amplify differences. 
+
+```{r, echo=FALSE}
+aa <- data.frame(group = "Thriller", Score = mean(Thriller))
+bb <- data.frame(group = "Sports", Score = mean(Sports))
+cc <- data.frame(group = "School", Score = mean(School))
+dd <- data.frame(group = "Sci_fi", Score = mean(Sci_fi))
+ee <- data.frame(group = "Psychological", Score = mean(Psychological))
+ff <- data.frame(group = "Shoujo", Score = mean(Shoujo))
+gg <- data.frame(group = "Slice_of_Life", Score = mean(Slice_of_Life))
+hh <- data.frame(group = "Music", Score = mean(Music))
+ii <- data.frame(group = "Adventure", Score = mean(Adventure))
+jj <- data.frame(group = "Supernatural", Score = mean(Supernatural))
+kk <- data.frame(group = "Action", Score = mean(Action))
+ll <- data.frame(group = "Shounen", Score = mean(Shounen))
+mm <- data.frame(group = "Drama", Score = mean(Drama))
+nn <- data.frame(group = "Comedy", Score = mean(Comedy))
+oo <- data.frame(group = "Romance", Score = mean(Romance))
+pp <- data.frame(group = "Historical", Score = mean(Historical))
+mean_genres <- rbind(aa,bb,cc,dd,ee,ff,gg,hh,ii,jj,kk,ll,mm,nn,oo,pp)
+ggp3 <- ggplot(mean_genres, aes(Score, group, fill=group)) +
+  geom_bar(stat="identity", width = 0.5) + 
+  coord_cartesian(xlim = c(5.95, 7.15)) +
+  labs(x="Average Score", y="Genre")
+
+print(ggp3)
+```
+
+We can clearly see Music is the worst performing genre by far, and Thriller, Shounen (aimed towards younger males), and Historical rate particularly highly, especially when compared to Comedy and Sci-Fi. We can get an even more concrete view by looking at the rank each genre would be placed at based on their average score. 
+
+```{r, echo=FALSE}
+# I have the mean scores of each genre, so checking manually what rank that places them is easier
+mean_thriller <- data.frame(group = "Thriller", Rank = 3287)
+mean_supernatural <- data.frame(group = "Supernatural", Rank = 3867)
+mean_sports <- data.frame(group = "Sports", Rank = 4355)
+mean_sof <- data.frame(group = "Slice of Life", Rank = 4568)
+mean_shounen <- data.frame(group = "Shounen", Rank = 3447)
+mean_shoujo <- data.frame(group = "Shoujo", Rank = 4313)
+mean_scifi <- data.frame(group = "Sci-Fi", Rank = 5111)
+mean_school <- data.frame(group = "School", Rank = 3874)
+mean_romance <- data.frame(group = "Romance", Rank = 3888)
+mean_psychological <- data.frame(group = "Psychological", Rank = 3977)
+mean_music <- data.frame(group = "Music", Rank = 8443)
+mean_historical <- data.frame(group = "Historical", Rank = 3117)
+mean_drama <- data.frame(group = "Drama", Rank = 3829)
+mean_comedy <- data.frame(group = "Comedy", Rank = 5017)
+mean_adventure <- data.frame(group = "Adventure", Rank = 4624)
+mean_action <- data.frame(group = "Action", Rank = 4538)
+
+genre_ranks <- rbind(mean_thriller,mean_supernatural,mean_sports,mean_sof,mean_shounen,mean_shoujo,
+                     mean_scifi,mean_school,mean_romance,mean_psychological,mean_music,mean_historical,
+                     mean_drama,mean_action,mean_comedy,mean_adventure)
+genre_ranks <- genre_ranks[order(-genre_ranks$Rank),]
+genre_ranks$group = factor(genre_ranks$group, levels = c(mean_historical,mean_thriller,mean_shounen,
+      mean_drama,mean_supernatural,mean_school,mean_romance,mean_psychological,mean_shoujo,mean_sports,
+      mean_action,mean_sof,mean_adventure,mean_comedy,mean_scifi,mean_music))
+g4 <- ggplot(genre_ranks, aes(x=Rank,y=group,fill=group)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=Rank),hjust=1.3,vjust=0.3,size=4) +
+  labs(x="Average Rank for Each Genre", y="Genre")
+
+plot(g4)
+```
+
+Interesting. The average anime under the Sci-Fi genre will receive a score low enough to put it at a rank nearly 2000 titles lower than the average anime under the Historical genre. The gap between Music anime and any other genre is even greater. The Historical genre likely dominates due to having, on average, a more serious and sophisticated tone, which MyAnimeList critics favor. Scores are based more on production-value than on enjoyment, and a serious anime is more likely to rely on good-quality production than on using bombastic excitement for sake of enjoyment. Let's have a look at one more factor that may relate to scores.
+
+
+# Episode Count vs. Critical Acclaim
+
+When it comes to episode count, we would expect anime with more episodes to score higher - a strong and popular anime is more likely to continue getting broadcasted, after all.
+
+```{r, echo=FALSE}
+episode_data <- data.frame(Title = anime_data$title, Score = anime_data$score, Rank = anime_data$ranked, Episodes = anime_data$episodes)
+episode_data <- episode_data[!duplicated(episode_data),]
+episode_data <- episode_data[order(-episode_data$Score),]
+episode_data <- na.omit(episode_data)
+filter3 <- subset(episode_data, Rank < 11500)
+
+group0 <- subset(filter3, Episodes = 1)
+group0_mean <- mean(group0$Score)
+
+filtergroup1 <- subset(filter3, Episodes < 10)
+group1 <- subset(filtergroup1, Episodes > 1)
+group1_mean <- mean(group1$Score)
+
+filtergroup2 <- subset(filter3, Episodes >= 10)
+group2 <- subset(filtergroup2, Episodes < 15)
+group2_mean <- mean(group2$Score)
+
+filtergroup3 <- subset(filter3, Episodes >= 15)
+group3 <- subset(filtergroup3, Episodes < 22)
+group3_mean <- mean(group3$Score)
+
+filtergroup4 <- subset(filter3, Episodes >= 22)
+group4 <- subset(filtergroup4, Episodes < 29)
+group4_mean <- mean(group4$Score)
+
+filtergroup5 <- subset(filter3, Episodes >= 29)
+group5 <- subset(filtergroup5, Episodes < 100)
+group5_mean <- mean(group5$Score)
+
+group6 <- subset(filter3, Episodes >= 100)
+group6_mean <- mean(group6$Score)
+
+group0 <- data.frame(group = "1", Score = group0_mean)
+group1 <- data.frame(group = "2-9", Score = group1_mean)
+group2 <- data.frame(group = "10-14", Score = group2_mean)
+group3 <- data.frame(group = "15-21", Score = group3_mean)
+group4 <- data.frame(group = "22-28", Score = group4_mean)
+group5 <- data.frame(group = "29-99", Score = group5_mean)
+group6 <- data.frame(group = "100+", Score = group6_mean)
+
+mean_genres <- rbind(group0,group1,group2,group3,group4,group5,group6)
+mean_genres$group = factor(mean_genres$group, levels = unique(c(group0,group1,group2,group3,group4,group5,group6)))
+
+ggp5 <- ggplot(mean_genres, aes(x=Score, y=group, fill=group)) +
+  geom_bar(stat="identity") +
+  coord_cartesian(xlim = c(6.3, 7.1)) +
+  geom_text(aes(label=c("Common Episode Count", "Unusual Episode Count", "Common Episode Count","Unusual Episode Count","Common Episode Count","Uncommon but Normal Episode Count","Uncommon but Normal Episode Count")),hjust=1.1,vjust=0.3,size=3) +
+  labs(x="Average Score", y="Episode Count", title="Average Score for Anime of Different Episode Counts")
+
+plot(ggp5)
+```
+
+Indeed, the 3 groups with the highest episode count have the best average scores. The situation isn't quite so simple, however. Most anime series are broadcast weekly and seasonally, and with each season having 13 weeks, the most common episode count for an anime is 13. In reality, any episode count of 10-14 is normal for a single-season anime, and 22-26 for a double-season anime. Anime with even more episodes than that are likely to be popular, long-running shows that continue being broadcast.
+
+Notice how the bars with an "Unusual Episode Count" perform worse than their neighboring bars. An episode count in these ranges signifies a potentially discontinued series, which can happen for a number of reasons, but surely isn't good for the ratings. Interestingly, the double-season 22-28 episode anime have a higher average score than the long-running series with over 100 episodes. This is likely due to the fact that long-running shows are usually driven by popularity over anything else, and they may start to lose critical acclaim over time whilst retaining popularity. A 26-episode story is better able to cleanly wrap itself up and leave an impact, than a popular series with hundreds of episodes and no real end.
+
+# Conclusion
+
+There is a lot of randomness that goes into the score an anime series gets, but various factors can help give us an idea. The genre, episode count, and popularity of an anime all relate to its score; assuming these are all independent variables, we would expect a popular anime with over 21 episodes and of the Historical, Shounen, or Thriller genres to be the highest-rated, on average. Any future anime that end up falling under these criteria are more likely to be well-received than other anime with less episodes, and/or a different genre.
