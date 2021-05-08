@@ -1,5 +1,5 @@
 ---
-title: "Anime: What Makes a Series Good?"
+title: "Anime: What Makes a Series Highly Rated?"
 author: "Ian Mogensen"
 date: "May 8, 2021"
 output:
@@ -20,7 +20,7 @@ options(warn=-1)
 
 ```{r raw_data, cache=FALSE, include=FALSE}
 library(readr)
-anime_data <- read_csv("C:/Users/mogen/Dropbox/3080/alt/AnimeStats/fin/animes.csv", 
+anime_data <- read_csv("https://raw.githubusercontent.com/ianmunro/DataSet/main/animes.csv", 
     trim_ws = FALSE)
 ```
 
@@ -456,3 +456,10 @@ Notice how the bars with an "Unusual Episode Count" perform worse than their nei
 # Conclusion
 
 There is a lot of randomness that goes into the score an anime series gets, but various factors can help give us an idea. The genre, episode count, and popularity of an anime all relate to its score; assuming these are all independent variables, we would expect a popular anime with over 21 episodes and of the Historical, Shounen, or Thriller genres to be the highest-rated, on average. Any future anime that end up falling under these criteria are more likely to be well-received than other anime with less episodes, and/or a different genre.
+
+# Appendix
+
+Original data set taken from https://www.kaggle.com/dhananjaypahuja/animez?select=animes.csv
+Credit to: Dhananjay Pahuja for data set
+
+Code/Rmd file used to analyze the data set uploaded to my Github: https://github.com/ianmunro/DataSet/blob/main/TermProj.Rmd
